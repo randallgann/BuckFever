@@ -107,7 +107,7 @@ class HuntingScene: SKScene, SKPhysicsContactDelegate {
     private var didSetup = false
 
     override func didMove(to view: SKView) {
-        print("[HuntingScene] didMove called, didSetup=\(didSetup)")
+
         guard !didSetup else { return }
         didSetup = true
         backgroundColor = .clear
@@ -645,15 +645,13 @@ class HuntingScene: SKScene, SKPhysicsContactDelegate {
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        print("[HuntingScene] touchesEnded — isDrawing=\(isDrawing), drawPower=\(drawPower), drawVector=\(drawVector)")
-        guard isDrawing else { print("[HuntingScene] touchesEnded SKIPPED — not drawing"); return }
+        guard isDrawing else { return }
         isDrawing = false
 
         clearTrajectoryDots()
         updateBowString(pullBack: 0)
 
         if drawPower > 0.1 {
-            print("[HuntingScene] launching arrow with power=\(drawPower)")
             launchArrow()
         } else {
             // Too weak a draw — reset
