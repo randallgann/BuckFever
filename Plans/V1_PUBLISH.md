@@ -1,6 +1,7 @@
-# Buck Fever v1.0 — Publishing Plan
+# Pineywoods Buck Draw v1.0 — Publishing Plan
 
-**Goal:** Publish Buck Fever as a free iOS app on the App Store and showcase it on pineywoodsweb.com as a portfolio piece for client acquisition.
+**Goal:** Publish Pineywoods Buck Draw as a free iOS app on the App Store and showcase it on pineywoodsweb.com as a portfolio piece for client acquisition.
+**Renamed from:** Buck Fever → Pineywoods Buck Draw (2026-05-06) — original name had conflicts with existing Wii game, Android game, and board game.
 
 **Status:** v1 gameplay complete, code pushed to GitHub.
 
@@ -10,11 +11,11 @@
 
 ### Prerequisites
 - [ ] Apple Developer Program membership ($99/year) — confirm active at developer.apple.com
-- [ ] Bundle ID registered: `com.pineywoodsweb.BuckFever`
+- [ ] Bundle ID registered: `com.pineywoodsweb.PineywoodsBuckDraw`
 
 ### App Store Assets Needed
 - [ ] **App Icon** — 1024x1024 PNG (no alpha, no rounded corners — Apple rounds them)
-  - Design: dark green background, stylized deer antlers or crosshair, "BUCK FEVER" text
+  - Design: dark green background, stylized deer antlers or crosshair, "PINEYWOODS BUCK DRAW" text
   - Sizes auto-generated from 1024x1024 via Xcode asset catalog
 - [ ] **Launch Screen** — storyboard or SwiftUI (currently uses default)
   - Match the main menu dark green gradient style
@@ -29,8 +30,8 @@
 
 ### App Store Connect Setup
 - [ ] Create app record in App Store Connect
-  - App Name: "Buck Fever: East Texas Edition"
-  - Subtitle: "Bow Hunting Game"
+  - App Name: "Pineywoods Buck Draw"
+  - Subtitle: "East Texas Bow Hunting"
   - Primary Category: Games
   - Secondary Category: Entertainment
   - Price: Free
@@ -38,7 +39,7 @@
   ```
   Draw your bow. Steady your aim. Welcome to East Texas deer season.
 
-  Buck Fever puts you in the piney woods with a bow, a quiver of arrows,
+  Pineywoods Buck Draw puts you in the piney woods with a bow, a quiver of arrows,
   and 60 seconds to bag as many bucks as you can. Pull back to draw,
   aim with trajectory dots, and release to let your arrow fly.
 
@@ -51,8 +52,8 @@
 
   Built with love in East Texas.
   ```
-- [ ] Keywords: bow hunting, deer, archery, east texas, hunting game, buck, whitetail
-- [ ] Privacy Policy URL (required) — can use pineywoodsweb.com/privacy or add a BuckFever-specific one
+- [ ] Keywords: bow hunting, deer, archery, east texas, hunting game, buck, whitetail, pineywoods
+- [ ] Privacy Policy URL (required) — can use pineywoodsweb.com/privacy
 - [ ] Support URL — pineywoodsweb.com
 - [ ] Age Rating: complete the questionnaire (likely 9+ for cartoon violence)
 
@@ -69,14 +70,15 @@
 ## Track 2: Pineywoodsweb.com Showcase
 
 ### Already Done
-- [x] BuckFever portfolio card on /examples page
+- [x] Pineywoods Buck Draw portfolio card on /examples page
 - [x] Screenshot of main menu
 - [x] GitHub link
+- [x] Deploy site update (deployed 2026-05-06)
 
 ### Still Needed
 - [ ] **Gameplay screenshots** — replace/supplement main menu screenshot with in-game action shots
 - [ ] **App Store badge** — once live, add "Download on the App Store" badge linking to the listing
-- [ ] **Deploy site update** — run `./scripts/deploy.sh` in pineywoodsweb.com repo to push current /examples page live
+- [ ] **Update portfolio card name** — rename from "Buck Fever" to "Pineywoods Buck Draw" on pineywoodsweb.com
 - [ ] **Update portfolio card** with:
   - App Store link (once approved)
   - Gameplay screenshot showing deer and arrow in flight

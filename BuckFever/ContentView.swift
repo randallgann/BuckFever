@@ -17,7 +17,7 @@ struct ContentView: View {
             VStack(spacing: 24) {
                 Spacer()
 
-                Text("BUCK FEVER")
+                Text("PINEYWOODS BUCK DRAW")
                     .font(.system(size: 56, weight: .black, design: .serif))
                     .foregroundStyle(.white)
                     .shadow(color: .black, radius: 4, x: 2, y: 2)
