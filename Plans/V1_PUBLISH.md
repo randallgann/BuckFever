@@ -10,15 +10,15 @@
 ## Track 1: App Store (Free Release)
 
 ### Prerequisites
-- [ ] Apple Developer Program membership ($99/year) — confirm active at developer.apple.com
-- [ ] Bundle ID registered: `com.pineywoodsweb.PineywoodsBuckDraw`
+- [x] Apple Developer Program membership ($99/year) — confirmed active
+- [x] Bundle ID registered: `com.pineywoodsweb.PineywoodsBuckDraw` (2026-05-06)
 
 ### App Store Assets Needed
-- [ ] **App Icon** — 1024x1024 PNG (no alpha, no rounded corners — Apple rounds them)
-  - Design: dark green background, stylized deer antlers or crosshair, "PINEYWOODS BUCK DRAW" text
-  - Sizes auto-generated from 1024x1024 via Xcode asset catalog
-- [ ] **Launch Screen** — storyboard or SwiftUI (currently uses default)
-  - Match the main menu dark green gradient style
+- [x] **App Icon** — 1024x1024 PNG (no alpha, no rounded corners — Apple rounds them)
+  - Buck in crosshair reticle, dark green background with pine tree silhouettes
+  - Installed in Assets.xcassets/AppIcon.appiconset/ (2026-05-06)
+- [x] **Launch Screen** — dark green background with centered app icon
+  - Uses Info.plist launch screen keys with LaunchBackground color + LaunchIcon image (2026-05-06)
 - [ ] **Screenshots** (required for submission)
   - Minimum: 1 set for 6.7" display (iPhone 15 Pro Max / 16 Pro Max)
   - Recommended: also 6.5" (iPhone 11 Pro Max) and 5.5" (iPhone 8 Plus)
@@ -90,8 +90,8 @@
 
 These aren't blockers but would strengthen the submission:
 
-- [ ] **App Icon** — needs to be designed and added to Assets.xcassets
-- [ ] **Custom Launch Screen** — replace default with branded splash
+- [x] **App Icon** — designed and added to Assets.xcassets (2026-05-06)
+- [x] **Custom Launch Screen** — dark green + centered icon (2026-05-06)
 - [ ] **Sound effects** — bow draw, arrow release, deer hit, miss (adds juice)
 - [ ] **Accessibility** — VoiceOver labels for HUD elements
 - [ ] **iPad support** — verify layout works on iPad (should work with current .resizeFill)

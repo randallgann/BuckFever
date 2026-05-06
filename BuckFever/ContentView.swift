@@ -17,10 +17,14 @@ struct ContentView: View {
             VStack(spacing: 24) {
                 Spacer()
 
-                Text("PINEYWOODS BUCK DRAW")
-                    .font(.system(size: 56, weight: .black, design: .serif))
-                    .foregroundStyle(.white)
-                    .shadow(color: .black, radius: 4, x: 2, y: 2)
+                VStack(spacing: 4) {
+                    Text("PINEYWOODS")
+                        .font(.system(size: 48, weight: .black, design: .serif))
+                    Text("BUCK DRAW")
+                        .font(.system(size: 56, weight: .black, design: .serif))
+                }
+                .foregroundStyle(.white)
+                .shadow(color: .black, radius: 4, x: 2, y: 2)
 
                 Text("East Texas Edition")
                     .font(.system(size: 20, weight: .medium, design: .serif))
