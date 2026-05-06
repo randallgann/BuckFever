@@ -27,13 +27,13 @@
   - Can record directly from simulator or device
 
 ### App Store Connect Setup
-- [ ] Create app record in App Store Connect
+- [x] Create app record in App Store Connect (2026-05-06)
   - App Name: "Pineywoods Buck Draw"
   - Subtitle: "East Texas Bow Hunting"
   - Primary Category: Games
   - Secondary Category: Entertainment
   - Price: Free
-- [ ] Write App Store description
+- [x] Write App Store description
   ```
   Draw your bow. Steady your aim. Welcome to East Texas deer season.
 
@@ -50,16 +50,16 @@
 
   Built with love in East Texas.
   ```
-- [ ] Keywords: bow hunting, deer, archery, east texas, hunting game, buck, whitetail, pineywoods
-- [ ] Privacy Policy URL (required) — can use pineywoodsweb.com/privacy
-- [ ] Support URL — pineywoodsweb.com
-- [ ] Age Rating: complete the questionnaire (likely 9+ for cartoon violence)
+- [x] Keywords: bow hunting, deer, archery, east texas, hunting game, buck, whitetail, pineywoods
+- [x] Privacy Policy URL — pineywoodsweb.com/privacy
+- [x] Support URL — pineywoodsweb.com
+- [x] Age Rating questionnaire completed
 
 ### Build & Submit
-- [ ] Set version number to 1.0.0, build number to 1
-- [ ] Archive release build in Xcode (Product > Archive)
-- [ ] Upload to App Store Connect via Xcode Organizer
-- [ ] Submit for App Review
+- [x] Set version number to 1.0.0, build number to 1
+- [x] Archive release build in Xcode (Product > Archive)
+- [x] Upload to App Store Connect via Xcode Organizer
+- [x] Submitted for App Review (2026-05-06)
   - Review typically takes 24-48 hours
   - No in-app purchases, no account required, no network calls = smooth review
 
