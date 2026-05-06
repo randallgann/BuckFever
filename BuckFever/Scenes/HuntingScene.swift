@@ -1,6 +1,24 @@
 import SpriteKit
 import UIKit
 
+// MARK: - UIColor Helpers
+
+extension UIColor {
+    func darker(by factor: CGFloat) -> UIColor {
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        getRed(&r, green: &g, blue: &b, alpha: &a)
+        return UIColor(red: max(r - factor, 0), green: max(g - factor, 0),
+                       blue: max(b - factor, 0), alpha: a)
+    }
+
+    func lighter(by factor: CGFloat) -> UIColor {
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        getRed(&r, green: &g, blue: &b, alpha: &a)
+        return UIColor(red: min(r + factor, 1), green: min(g + factor, 1),
+                       blue: min(b + factor, 1), alpha: a)
+    }
+}
+
 // MARK: - Physics Categories
 struct PhysicsCategory {
     static let none:    UInt32 = 0
@@ -77,10 +95,7 @@ class HuntingScene: SKScene, SKPhysicsContactDelegate {
     weak var gameState: GameState?
 
     // Nodes
-    private var bowNode: SKNode!
-    private var bowBody: SKShapeNode!
-    private var bowString: SKShapeNode!
-    private var nockPoint: SKShapeNode!         // Where the arrow sits on the string
+    private var bowNode: SKNode!                // Invisible anchor point for arrow position
     private var arrowNode: SKNode?              // Active arrow being aimed
     private var trajectoryDots: [SKShapeNode] = []
 
@@ -207,7 +222,7 @@ class HuntingScene: SKScene, SKPhysicsContactDelegate {
         addChild(ground)
     }
 
-    // MARK: - Bow
+    // MARK: - Bow (invisible anchor)
 
     private func setupBow() {
         let bowX = size.width / 2
@@ -216,52 +231,7 @@ class HuntingScene: SKScene, SKPhysicsContactDelegate {
         bowNode = SKNode()
         bowNode.position = CGPoint(x: bowX, y: bowY)
         bowNode.zPosition = 10
-
-        // Bow limbs (curved arc)
-        let bowPath = CGMutablePath()
-        bowPath.addArc(center: CGPoint(x: 0, y: 0),
-                       radius: 50,
-                       startAngle: .pi * 0.3,
-                       endAngle: .pi * 0.7,
-                       clockwise: true)
-        bowBody = SKShapeNode(path: bowPath)
-        bowBody.strokeColor = UIColor(red: 0.40, green: 0.25, blue: 0.12, alpha: 1)
-        bowBody.lineWidth = 5
-        bowBody.fillColor = .clear
-        bowNode.addChild(bowBody)
-
-        // Bow string (straight line from tip to tip, will bend during draw)
-        updateBowString(pullBack: 0)
-
-        // Nock point (invisible touch target)
-        nockPoint = SKShapeNode(circleOfRadius: 30)
-        nockPoint.fillColor = .clear
-        nockPoint.strokeColor = .clear
-        nockPoint.position = CGPoint(x: 0, y: 0)
-        bowNode.addChild(nockPoint)
-
         addChild(bowNode)
-    }
-
-    private func updateBowString(pullBack: CGFloat) {
-        bowString?.removeFromParent()
-
-        let stringPath = CGMutablePath()
-        // String endpoints (tips of the bow arc)
-        let topTip = CGPoint(x: -50 * cos(.pi * 0.3), y: 50 * sin(.pi * 0.3))
-        let bottomTip = CGPoint(x: -50 * cos(.pi * 0.7), y: 50 * sin(.pi * 0.7))
-        let pullPoint = CGPoint(x: -pullBack, y: 0)
-
-        stringPath.move(to: topTip)
-        stringPath.addLine(to: pullPoint)
-        stringPath.addLine(to: bottomTip)
-
-        bowString = SKShapeNode(path: stringPath)
-        bowString.strokeColor = UIColor(red: 0.75, green: 0.70, blue: 0.55, alpha: 1)
-        bowString.lineWidth = 2
-        bowString.fillColor = .clear
-        bowString.zPosition = 1
-        bowNode.addChild(bowString)
     }
 
     // MARK: - Arrow
@@ -348,6 +318,21 @@ class HuntingScene: SKScene, SKPhysicsContactDelegate {
 
             // Check ground hit
             if y <= groundY {
+                node.userData?["stopped"] = true
+                self.handleArrowHitGround(arrow: node)
+                return
+            }
+
+            // Check treeline boundary (arrow has gone past the clearing)
+            let treelineY = self.size.height * 0.57
+            if y >= treelineY {
+                node.userData?["stopped"] = true
+                self.handleArrowHitGround(arrow: node)
+                return
+            }
+
+            // Check off-screen left/right
+            if x < -50 || x > self.size.width + 50 {
                 node.userData?["stopped"] = true
                 self.handleArrowHitGround(arrow: node)
                 return
@@ -513,70 +498,352 @@ class HuntingScene: SKScene, SKPhysicsContactDelegate {
     private func createDeerNode(rack: DeerInfo.RackSize, facingRight: Bool) -> SKNode {
         let deer = SKNode()
         let s = rack.bodySize
+        let scale = s.width / 80.0  // normalize to reference size
 
-        // Body
-        let body = SKShapeNode(ellipseOf: s)
-        body.fillColor = rack.color
-        body.strokeColor = .clear
-        deer.addChild(body)
+        let baseColor = rack.color
+        let darkColor = baseColor.darker(by: 0.25)
+        let lightColor = baseColor.lighter(by: 0.20)
+        let bellyColor = baseColor.lighter(by: 0.35)
+        let antlerColor = UIColor(red: 0.30, green: 0.22, blue: 0.12, alpha: 1)
 
-        // Head
-        let headSize = CGSize(width: s.width * 0.4, height: s.height * 0.75)
-        let head = SKShapeNode(ellipseOf: headSize)
-        head.fillColor = rack.color
-        head.strokeColor = .clear
-        let headX: CGFloat = facingRight ? s.width * 0.45 : -s.width * 0.45
-        head.position = CGPoint(x: headX, y: s.height * 0.35)
-        deer.addChild(head)
+        // --- Layer 1: Body silhouette (organic shape with bezier curves) ---
+        let bodyPath = CGMutablePath()
+        // Start at chest, go along back, down rump, under belly, back to chest
+        bodyPath.move(to: p(22, 8, scale))
+        // Shoulder hump
+        bodyPath.addCurve(to: p(8, 18, scale),
+                          control1: p(18, 16, scale),
+                          control2: p(12, 20, scale))
+        // Back line with slight dip
+        bodyPath.addCurve(to: p(-20, 16, scale),
+                          control1: p(0, 19, scale),
+                          control2: p(-10, 18, scale))
+        // Rump curve
+        bodyPath.addCurve(to: p(-30, 4, scale),
+                          control1: p(-26, 15, scale),
+                          control2: p(-30, 10, scale))
+        // Under rump
+        bodyPath.addCurve(to: p(-22, -6, scale),
+                          control1: p(-31, -2, scale),
+                          control2: p(-28, -5, scale))
+        // Belly
+        bodyPath.addCurve(to: p(8, -8, scale),
+                          control1: p(-12, -10, scale),
+                          control2: p(0, -11, scale))
+        // Chest
+        bodyPath.addCurve(to: p(22, 8, scale),
+                          control1: p(16, -6, scale),
+                          control2: p(22, 0, scale))
+        bodyPath.closeSubpath()
 
-        // Antlers
-        let antlerNode = SKShapeNode()
-        let antlerPath = CGMutablePath()
-        let antlerHeight = s.height * 0.6
-        let antlerWidth = s.width * 0.3
-        let baseY: CGFloat = 0
+        let bodyNode = SKShapeNode(path: bodyPath)
+        bodyNode.fillColor = baseColor
+        bodyNode.strokeColor = darkColor
+        bodyNode.lineWidth = 0.5 * scale
+        deer.addChild(bodyNode)
 
-        // Left beam
-        antlerPath.move(to: CGPoint(x: -2, y: baseY))
-        antlerPath.addLine(to: CGPoint(x: -antlerWidth, y: antlerHeight))
-        // Right beam
-        antlerPath.move(to: CGPoint(x: 2, y: baseY))
-        antlerPath.addLine(to: CGPoint(x: antlerWidth, y: antlerHeight))
+        // --- Layer 2: Belly highlight ---
+        let bellyPath = CGMutablePath()
+        bellyPath.move(to: p(14, -4, scale))
+        bellyPath.addCurve(to: p(-20, -3, scale),
+                           control1: p(4, -9, scale),
+                           control2: p(-8, -8, scale))
+        bellyPath.addCurve(to: p(-14, 0, scale),
+                           control1: p(-18, -1, scale),
+                           control2: p(-16, 0, scale))
+        bellyPath.addCurve(to: p(14, -4, scale),
+                           control1: p(-2, -4, scale),
+                           control2: p(8, -6, scale))
+        bellyPath.closeSubpath()
 
-        // Tines
+        let bellyNode = SKShapeNode(path: bellyPath)
+        bellyNode.fillColor = bellyColor
+        bellyNode.strokeColor = .clear
+        deer.addChild(bellyNode)
+
+        // --- Layer 3: Shoulder shadow ---
+        let shoulderPath = CGMutablePath()
+        shoulderPath.move(to: p(18, 14, scale))
+        shoulderPath.addCurve(to: p(8, 18, scale),
+                              control1: p(14, 18, scale),
+                              control2: p(10, 19, scale))
+        shoulderPath.addCurve(to: p(6, 6, scale),
+                              control1: p(6, 14, scale),
+                              control2: p(5, 10, scale))
+        shoulderPath.addCurve(to: p(18, 14, scale),
+                              control1: p(10, 6, scale),
+                              control2: p(16, 10, scale))
+        shoulderPath.closeSubpath()
+
+        let shoulderNode = SKShapeNode(path: shoulderPath)
+        shoulderNode.fillColor = darkColor
+        shoulderNode.strokeColor = .clear
+        deer.addChild(shoulderNode)
+
+        // --- Layer 4: Neck ---
+        let neckPath = CGMutablePath()
+        neckPath.move(to: p(22, 8, scale))
+        neckPath.addCurve(to: p(30, 18, scale),
+                          control1: p(24, 12, scale),
+                          control2: p(26, 16, scale))
+        neckPath.addCurve(to: p(28, 24, scale),
+                          control1: p(32, 20, scale),
+                          control2: p(30, 22, scale))
+        neckPath.addCurve(to: p(18, 16, scale),
+                          control1: p(24, 22, scale),
+                          control2: p(20, 18, scale))
+        neckPath.closeSubpath()
+
+        let neckNode = SKShapeNode(path: neckPath)
+        neckNode.fillColor = baseColor
+        neckNode.strokeColor = darkColor
+        neckNode.lineWidth = 0.5 * scale
+        deer.addChild(neckNode)
+
+        // --- Layer 5: Head ---
+        let headPath = CGMutablePath()
+        headPath.move(to: p(28, 24, scale))
+        // Forehead
+        headPath.addCurve(to: p(38, 26, scale),
+                          control1: p(30, 28, scale),
+                          control2: p(34, 28, scale))
+        // Snout
+        headPath.addCurve(to: p(42, 22, scale),
+                          control1: p(40, 26, scale),
+                          control2: p(42, 24, scale))
+        // Nose tip
+        headPath.addCurve(to: p(40, 19, scale),
+                          control1: p(42, 20, scale),
+                          control2: p(42, 19, scale))
+        // Jaw line
+        headPath.addCurve(to: p(30, 18, scale),
+                          control1: p(38, 18, scale),
+                          control2: p(34, 17, scale))
+        headPath.addCurve(to: p(28, 24, scale),
+                          control1: p(28, 20, scale),
+                          control2: p(28, 22, scale))
+        headPath.closeSubpath()
+
+        let headNode = SKShapeNode(path: headPath)
+        headNode.fillColor = baseColor
+        headNode.strokeColor = darkColor
+        headNode.lineWidth = 0.5 * scale
+        deer.addChild(headNode)
+
+        // --- Layer 6: Nose ---
+        let nosePath = CGMutablePath()
+        nosePath.addEllipse(in: CGRect(x: 39 * scale, y: 19.5 * scale,
+                                        width: 3.5 * scale, height: 2.5 * scale))
+        let noseNode = SKShapeNode(path: nosePath)
+        noseNode.fillColor = UIColor(red: 0.15, green: 0.10, blue: 0.08, alpha: 1)
+        noseNode.strokeColor = .clear
+        deer.addChild(noseNode)
+
+        // --- Layer 7: Eye ---
+        let eyeX: CGFloat = 34 * scale
+        let eyeY: CGFloat = 25 * scale
+        let eye = SKShapeNode(circleOfRadius: 1.5 * scale)
+        eye.fillColor = UIColor(red: 0.12, green: 0.08, blue: 0.05, alpha: 1)
+        eye.strokeColor = .clear
+        eye.position = CGPoint(x: eyeX, y: eyeY)
+        deer.addChild(eye)
+
+        // Eye glint
+        let glint = SKShapeNode(circleOfRadius: 0.6 * scale)
+        glint.fillColor = .white
+        glint.strokeColor = .clear
+        glint.position = CGPoint(x: eyeX + 0.5 * scale, y: eyeY + 0.5 * scale)
+        deer.addChild(glint)
+
+        // --- Layer 8: Ear ---
+        let earPath = CGMutablePath()
+        earPath.move(to: p(30, 27, scale))
+        earPath.addCurve(to: p(27, 32, scale),
+                         control1: p(28, 30, scale),
+                         control2: p(26, 32, scale))
+        earPath.addCurve(to: p(32, 28, scale),
+                         control1: p(28, 32, scale),
+                         control2: p(31, 30, scale))
+        earPath.closeSubpath()
+
+        let earNode = SKShapeNode(path: earPath)
+        earNode.fillColor = lightColor
+        earNode.strokeColor = darkColor
+        earNode.lineWidth = 0.5 * scale
+        deer.addChild(earNode)
+
+        // Inner ear
+        let innerEarPath = CGMutablePath()
+        innerEarPath.move(to: p(30, 27.5, scale))
+        innerEarPath.addCurve(to: p(28, 31, scale),
+                              control1: p(29, 29.5, scale),
+                              control2: p(27.5, 31, scale))
+        innerEarPath.addCurve(to: p(31, 28, scale),
+                              control1: p(28.5, 31, scale),
+                              control2: p(30.5, 29.5, scale))
+        innerEarPath.closeSubpath()
+
+        let innerEarNode = SKShapeNode(path: innerEarPath)
+        innerEarNode.fillColor = UIColor(red: 0.75, green: 0.55, blue: 0.45, alpha: 1)
+        innerEarNode.strokeColor = .clear
+        deer.addChild(innerEarNode)
+
+        // --- Layer 9: Tail ---
+        let tailPath = CGMutablePath()
+        tailPath.move(to: p(-30, 6, scale))
+        tailPath.addCurve(to: p(-35, 12, scale),
+                          control1: p(-33, 8, scale),
+                          control2: p(-36, 10, scale))
+        tailPath.addCurve(to: p(-31, 8, scale),
+                          control1: p(-35, 14, scale),
+                          control2: p(-32, 10, scale))
+        tailPath.closeSubpath()
+
+        let tailNode = SKShapeNode(path: tailPath)
+        tailNode.fillColor = .white
+        tailNode.strokeColor = .clear
+        deer.addChild(tailNode)
+
+        // --- Layer 10: Legs (organic shaped with joints) ---
+        let legPositions: [(x: CGFloat, isFront: Bool)] = [
+            (16, true), (10, true), (-16, false), (-22, false)
+        ]
+
+        for (i, leg) in legPositions.enumerated() {
+            let legPath = CGMutablePath()
+            let lx = leg.x
+            let legLen: CGFloat = leg.isFront ? 16 : 14
+            let kneeOffset: CGFloat = leg.isFront ? 1.5 : -1.5
+            // Slightly stagger paired legs for depth
+            let isBack = (i == 0 || i == 2)
+
+            // Upper leg
+            legPath.move(to: p(lx - 1.5, -4, scale))
+            legPath.addCurve(to: p(lx + kneeOffset - 1.2, -(4 + legLen * 0.55), scale),
+                             control1: p(lx - 1.5, -(4 + legLen * 0.2), scale),
+                             control2: p(lx + kneeOffset - 1.5, -(4 + legLen * 0.4), scale))
+            // Lower leg
+            legPath.addCurve(to: p(lx + 0.5, -(4 + legLen), scale),
+                             control1: p(lx + kneeOffset - 0.8, -(4 + legLen * 0.7), scale),
+                             control2: p(lx + 0.5, -(4 + legLen * 0.9), scale))
+            // Hoof
+            legPath.addLine(to: p(lx + 2.5, -(4 + legLen), scale))
+            legPath.addLine(to: p(lx + 2.5, -(4 + legLen - 1.5), scale))
+            // Back up
+            legPath.addCurve(to: p(lx + kneeOffset + 1.2, -(4 + legLen * 0.55), scale),
+                             control1: p(lx + 2, -(4 + legLen * 0.85), scale),
+                             control2: p(lx + kneeOffset + 1.5, -(4 + legLen * 0.7), scale))
+            legPath.addCurve(to: p(lx + 1.5, -4, scale),
+                             control1: p(lx + kneeOffset + 1.5, -(4 + legLen * 0.35), scale),
+                             control2: p(lx + 1.5, -(4 + legLen * 0.15), scale))
+            legPath.closeSubpath()
+
+            let legNode = SKShapeNode(path: legPath)
+            legNode.fillColor = isBack ? darkColor : baseColor
+            legNode.strokeColor = darkColor
+            legNode.lineWidth = 0.3 * scale
+            legNode.zPosition = isBack ? -1 : 1
+            deer.addChild(legNode)
+
+            // Hoof accent
+            let hoofPath = CGMutablePath()
+            hoofPath.addRect(CGRect(x: (lx - 0.5) * scale, y: -(4 + legLen) * scale,
+                                     width: 3.5 * scale, height: 1.8 * scale))
+            let hoofNode = SKShapeNode(path: hoofPath)
+            hoofNode.fillColor = UIColor(red: 0.20, green: 0.15, blue: 0.10, alpha: 1)
+            hoofNode.strokeColor = .clear
+            hoofNode.zPosition = isBack ? -1 : 1
+            deer.addChild(hoofNode)
+        }
+
+        // --- Layer 11: Antlers (organic curved beams with tines) ---
+        let antlerBaseX: CGFloat = 31 * scale
+        let antlerBaseY: CGFloat = 27 * scale
+        let beamHeight = s.height * 0.5 + CGFloat(rack.antlerPoints) * 1.2 * scale
+        let beamSpread = s.width * 0.18 + CGFloat(rack.antlerPoints) * 0.6 * scale
         let tinesPerSide = rack.antlerPoints / 2
-        for i in 0..<tinesPerSide {
-            let progress = CGFloat(i + 1) / CGFloat(tinesPerSide + 1)
-            let y = baseY + antlerHeight * progress
-            let xL = -antlerWidth * progress
-            let xR = antlerWidth * progress
-            antlerPath.move(to: CGPoint(x: xL, y: y))
-            antlerPath.addLine(to: CGPoint(x: xL - 6, y: y + 10))
-            antlerPath.move(to: CGPoint(x: xR, y: y))
-            antlerPath.addLine(to: CGPoint(x: xR + 6, y: y + 10))
+
+        // Draw each beam as a filled shape for thickness
+        for side: CGFloat in [-1, 1] {
+            let beamPath = CGMutablePath()
+            let spreadX = side * beamSpread
+            let thickness: CGFloat = 1.2 * scale
+
+            // Inner edge of beam
+            beamPath.move(to: CGPoint(x: antlerBaseX - side * 1 * scale, y: antlerBaseY))
+            beamPath.addCurve(
+                to: CGPoint(x: antlerBaseX + spreadX, y: antlerBaseY + beamHeight),
+                control1: CGPoint(x: antlerBaseX + spreadX * 0.3, y: antlerBaseY + beamHeight * 0.4),
+                control2: CGPoint(x: antlerBaseX + spreadX * 0.7, y: antlerBaseY + beamHeight * 0.7)
+            )
+            // Tip
+            beamPath.addLine(to: CGPoint(x: antlerBaseX + spreadX + side * thickness, y: antlerBaseY + beamHeight - thickness))
+            // Outer edge back down
+            beamPath.addCurve(
+                to: CGPoint(x: antlerBaseX + side * 1 * scale, y: antlerBaseY),
+                control1: CGPoint(x: antlerBaseX + spreadX * 0.7 + side * thickness, y: antlerBaseY + beamHeight * 0.65),
+                control2: CGPoint(x: antlerBaseX + spreadX * 0.3 + side * thickness, y: antlerBaseY + beamHeight * 0.35)
+            )
+            beamPath.closeSubpath()
+
+            let beamNode = SKShapeNode(path: beamPath)
+            beamNode.fillColor = antlerColor
+            beamNode.strokeColor = antlerColor.lighter(by: 0.15)
+            beamNode.lineWidth = 0.3 * scale
+            deer.addChild(beamNode)
+
+            // Tines branching off the beam
+            for i in 0..<tinesPerSide {
+                let progress = CGFloat(i + 1) / CGFloat(tinesPerSide + 1)
+                let tineBaseX = antlerBaseX + spreadX * progress
+                let tineBaseY = antlerBaseY + beamHeight * progress
+                let tineLen: CGFloat = (4 + CGFloat(i) * 1.5) * scale
+                let tineAngle: CGFloat = side > 0 ? 0.4 : -0.4
+
+                let tinePath = CGMutablePath()
+                tinePath.move(to: CGPoint(x: tineBaseX, y: tineBaseY))
+                tinePath.addLine(to: CGPoint(x: tineBaseX + side * tineLen * cos(tineAngle),
+                                              y: tineBaseY + tineLen * sin(tineAngle) + tineLen * 0.6))
+                tinePath.addLine(to: CGPoint(x: tineBaseX + side * 0.8 * scale, y: tineBaseY + 0.5 * scale))
+                tinePath.closeSubpath()
+
+                let tineNode = SKShapeNode(path: tinePath)
+                tineNode.fillColor = antlerColor
+                tineNode.strokeColor = .clear
+                deer.addChild(tineNode)
+            }
         }
 
-        antlerNode.path = antlerPath
-        antlerNode.strokeColor = UIColor(red: 0.30, green: 0.20, blue: 0.10, alpha: 1)
-        antlerNode.lineWidth = 2
-        antlerNode.position = CGPoint(x: headX, y: s.height * 0.65)
-        deer.addChild(antlerNode)
+        // --- Layer 12: Rump patch (subtle lighter area) ---
+        let rumpPath = CGMutablePath()
+        rumpPath.move(to: p(-24, 10, scale))
+        rumpPath.addCurve(to: p(-28, 2, scale),
+                          control1: p(-28, 8, scale),
+                          control2: p(-30, 4, scale))
+        rumpPath.addCurve(to: p(-20, 8, scale),
+                          control1: p(-26, 0, scale),
+                          control2: p(-22, 4, scale))
+        rumpPath.addCurve(to: p(-24, 10, scale),
+                          control1: p(-20, 10, scale),
+                          control2: p(-22, 10, scale))
+        rumpPath.closeSubpath()
 
-        // Legs
-        for i in 0..<4 {
-            let leg = SKShapeNode(rectOf: CGSize(width: 3, height: s.height * 0.5))
-            leg.fillColor = rack.color
-            leg.strokeColor = .clear
-            let legX = CGFloat(i) * (s.width * 0.2) - s.width * 0.3
-            leg.position = CGPoint(x: legX, y: -s.height * 0.45)
-            deer.addChild(leg)
-        }
+        let rumpNode = SKShapeNode(path: rumpPath)
+        rumpNode.fillColor = lightColor
+        rumpNode.strokeColor = .clear
+        deer.addChild(rumpNode)
 
+        // Flip for direction
         if !facingRight {
             deer.xScale = -1
         }
 
         return deer
+    }
+
+    /// Helper to scale design coordinates
+    private func p(_ x: CGFloat, _ y: CGFloat, _ scale: CGFloat) -> CGPoint {
+        return CGPoint(x: x * scale, y: y * scale)
     }
 
     // MARK: - Touch Handling
@@ -624,15 +891,8 @@ class HuntingScene: SKScene, SKPhysicsContactDelegate {
             drawVector = CGVector(dx: dx * scale, dy: dy * scale)
         }
 
-        // Update bow string visual
-        updateBowString(pullBack: clampedDist * 0.2)
-
-        // Move nocked arrow back with the string
+        // Rotate arrow to aim direction (stays at bow position, just rotates)
         if let arrow = arrowNode {
-            let pullOffset = clampedDist * 0.2
-            arrow.position = CGPoint(x: bowNode.position.x - pullOffset,
-                                     y: bowNode.position.y)
-            // Rotate arrow to match aim direction
             let angle = atan2(drawVector.dy, drawVector.dx)
             arrow.zRotation = angle
         }
@@ -649,7 +909,6 @@ class HuntingScene: SKScene, SKPhysicsContactDelegate {
         isDrawing = false
 
         clearTrajectoryDots()
-        updateBowString(pullBack: 0)
 
         if drawPower > 0.1 {
             launchArrow()
