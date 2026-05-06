@@ -19,11 +19,9 @@
   - Installed in Assets.xcassets/AppIcon.appiconset/ (2026-05-06)
 - [x] **Launch Screen** — dark green background with centered app icon
   - Uses Info.plist launch screen keys with LaunchBackground color + LaunchIcon image (2026-05-06)
-- [ ] **Screenshots** (required for submission)
-  - Minimum: 1 set for 6.7" display (iPhone 15 Pro Max / 16 Pro Max)
-  - Recommended: also 6.5" (iPhone 11 Pro Max) and 5.5" (iPhone 8 Plus)
-  - Capture: main menu, gameplay with deer, arrow in flight, score screen, game over
-  - At least 3 screenshots, max 10
+- [x] **Screenshots** — 6 captured from iPhone 17 Pro simulator (1206x2622)
+  - 01_title_screen, 02_gameplay_aiming, 03_arrow_in_flight, 04_arrow_in_flight_2, 05_hit_scoring, 06_game_over
+  - Saved in Screenshots/ directory (2026-05-06)
 - [ ] **App Preview Video** (optional but high impact)
   - 15-30 second gameplay recording
   - Can record directly from simulator or device
